@@ -19,6 +19,7 @@ const USLibrary = ({ contractAddress }: USContract) => {
   const [votesBiden, setVotesBiden] = useState<number | undefined>();
   const [votesTrump, setVotesTrump] = useState<number | undefined>();
   const [stateSeats, setStateSeats] = useState<number | undefined>();
+  const [error, setError] = useState<string | undefined>();
   const [txLoading, setTxLoading] = useState(false);
   const [txHash, setTxHash] = useState("0x00000000000");
 
@@ -40,21 +41,43 @@ const USLibrary = ({ contractAddress }: USContract) => {
 
   const submitStateResults = async () => {
     const result: any = [name, votesBiden, votesTrump, stateSeats];
-    const tx = await usElectionContract.submitStateResult(result);
-    setTxLoading(true);
-    setTxHash(tx.hash);
-    await tx.wait();
-    setTxLoading(false);
-    resetForm();
+    const tx = await usElectionContract.submitStateResult(result).catch((e) => {
+      return e;
+    });
+    if ("hash" in tx) {
+      setTxLoading(true);
+      setTxHash(tx.hash);
+      await tx.wait();
+      setTxLoading(false);
+      resetForm();
+    } else {
+      if ("error" in tx) {
+        setError(tx.error.message.toString());
+      } else if ("message" in tx) {
+        setError(tx.message);
+      } else {
+        setError(tx.toString());
+      }
+    }
   };
 
   const endElection = async () => {
-    const tx = await usElectionContract.endElection();
-    setTxLoading(true);
-    setTxHash(tx.hash);
-    await tx.wait();
-    setTxLoading(false);
-    console.log(tx);
+    const tx = await usElectionContract.endElection().catch((e) => {
+      return e;
+    });
+    if ("hash" in tx) {
+      setTxLoading(true);
+      setTxHash(tx.hash);
+      await tx.wait();
+      setTxLoading(false);
+      resetForm();
+    } else {
+      if ("error" in tx) {
+        setError(tx.error.message);
+      } else {
+        setError(tx.message);
+      }
+    }
   };
   const resetForm = async () => {
     setTxHash("");
@@ -77,6 +100,17 @@ const USLibrary = ({ contractAddress }: USContract) => {
               {txHash}
             </a>
           </h5>
+        </Modal>
+      )}
+      {error !== undefined && (
+        <Modal title="Error">
+          {error}
+          <button
+            className="button-wrapper"
+            onClick={() => setError(undefined)}
+          >
+            Close
+          </button>
         </Modal>
       )}
       <ElectionInfo
@@ -128,7 +162,7 @@ const USLibrary = ({ contractAddress }: USContract) => {
         }
 
         .button-wrapper {
-          margin: 20px;
+          margin: 50px;
         }
       `}</style>
     </div>
